@@ -23,13 +23,10 @@ jobs:
         target: 'desktop'
         arch: 'win64_msvc2019_64'
         modules: 'qtserialbus'
-        cache: 'true'
+        cache: 'false'
         
     - name: 🔨 配置 CMake
-      shell: bash
       run: |
-        # 使用 CMAKE_PREFIX_PATH 指向 Qt
-        export CMAKE_PREFIX_PATH="$QT_ROOT_DIR"
         cmake -S . -B build
         
     - name: 🏗️ 编译项目
