@@ -10,6 +10,9 @@ set(CMAKE_AUTOUIC ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets SerialBus)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets SerialBus)
 
+message(STATUS "Qt Version: ${QT_VERSION}")
+message(STATUS "Qt Core Version: ${Qt${QT_VERSION_MAJOR}_CORE_VERSION}")
+
 set(PROJECT_SOURCES
     src/main.cpp
     src/mainwindow.cpp
