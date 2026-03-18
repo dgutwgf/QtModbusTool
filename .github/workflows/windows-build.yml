@@ -35,9 +35,9 @@ jobs:
         
     - name: 📁 收集依赖
       run: |
-        mkdir deploy
-        copy build\Release\QtModbusTool.exe deploy\
-        windeployqt deploy\QtModbusTool.exe --release --no-compiler-runtime
+        New-Item -ItemType Directory -Force -Path deploy
+        Copy-Item build\Release\QtModbusTool.exe deploy\
+        & "$env:QT_ROOT_DIR\bin\windeployqt.exe" --release --no-compiler-runtime deploy\QtModbusTool.exe
         
     - name: 📦 创建压缩包
       run: |
