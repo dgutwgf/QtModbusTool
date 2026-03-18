@@ -22,12 +22,12 @@ jobs:
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2019_64'
-        modules: 'qtserialbus'
+        modules: 'qtserialbus qtserialport'
         cache: 'false'
         
     - name: 🔨 配置 CMake
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake -S . -B build
         
     - name: 🏗️ 编译项目
       run: |
