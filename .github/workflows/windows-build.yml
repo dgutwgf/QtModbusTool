@@ -33,15 +33,24 @@ jobs:
       run: |
         cmake --build build --config Release
         
-    - name: 📁 收集依赖
+    - name: 📁 打包程序
       run: |
-        New-Item -ItemType Directory -Force -Path deploy
-        Copy-Item build\Release\QtModbusTool.exe deploy\
-        & "$env:QT_ROOT_DIR\bin\windeployqt.exe" --release --no-compiler-runtime deploy\QtModbusTool.exe
+        # 创建发布目录
+        New-Item -ItemType Directory -Force -Path publish
+        
+        # 复制主程序
+        Copy-Item build\Release\QtModbusTool.exe publish\
+        
+        # 手动复制必要的 Qt DLL
+        Copy-Item $env:QT_ROOT_DIR\bin\Qt6Core.dll publish\
+        Copy-Item $env:QT_ROOT_DIR\bin\Qt6Gui.dll publish\
+        Copy-Item $env:QT_ROOT_DIR\bin\Qt6Widgets.dll publish\
+        Copy-Item $env:QT_ROOT_DIR\bin\Qt6SerialBus.dll publish\
+        Copy-Item $env:QT_ROOT_DIR\bin\Qt6SerialPort.dll publish\
         
     - name: 📦 创建压缩包
       run: |
-        Compress-Archive -Path deploy\* -DestinationPath QtModbusTool-Windows-x64.zip -Force
+        Compress-Archive -Path publish\* -DestinationPath QtModbusTool-Windows-x64.zip -Force
         
     - name: 📤 上传构建产物
       uses: actions/upload-artifact@v4
