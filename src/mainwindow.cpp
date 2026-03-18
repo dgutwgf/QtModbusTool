@@ -2,6 +2,8 @@
 #include <QMessageBox>
 #include <QDateTime>
 #include <QHostAddress>
+#include <QHeaderView>
+#include <QModbusReply>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), isConnected(false)
@@ -240,7 +242,7 @@ void MainWindow::onReadButtonClicked()
         appendLog(QString("读取请求已发送：地址=%1, 数量=%2").arg(startAddr).arg(quantity));
         
         connect(reply, &QModbusReply::finished, this, [this, reply, startAddr]() {
-            if (reply->error() == QModbusReply::NoError) {
+            if (reply->error() == QModbusReply::Error::NoError) {
                 const QModbusDataUnit dataUnit = reply->result();
                 dataTable->setRowCount(dataUnit.valueCount());
                 
@@ -302,7 +304,7 @@ void MainWindow::onWriteButtonClicked()
         appendLog(QString("写入请求已发送：地址=%1, 值=%2").arg(startAddr).arg(valueStr));
         
         connect(reply, &QModbusReply::finished, this, [this, reply]() {
-            if (reply->error() == QModbusReply::NoError) {
+            if (reply->error() == QModbusReply::Error::NoError) {
                 appendLog("写入成功！✓");
             } else {
                 appendLog(QString("写入失败：%1").arg(reply->errorString()));
@@ -329,7 +331,7 @@ void MainWindow::onScanButtonClicked()
     
     if (reply) {
         connect(reply, &QModbusReply::finished, this, [this, reply]() {
-            if (reply->error() == QModbusReply::NoError) {
+            if (reply->error() == QModbusReply::Error::NoError) {
                 appendLog("设备响应正常 ✓");
             } else {
                 appendLog(QString("设备无响应：%1").arg(reply->errorString()));
