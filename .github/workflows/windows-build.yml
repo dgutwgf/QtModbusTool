@@ -37,7 +37,7 @@ jobs:
       run: |
         mkdir deploy
         copy build\Release\QtModbusTool.exe deploy\
-        windeployqt deploy\QtModbusTool.exe --release
+        windeployqt deploy\QtModbusTool.exe --release --no-compiler-runtime
         
     - name: 📦 创建压缩包
       run: |
