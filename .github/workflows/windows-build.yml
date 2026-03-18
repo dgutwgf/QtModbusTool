@@ -9,25 +9,24 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-2019
+    runs-on: windows-latest
     
     steps:
     - name: 📥 检出代码
       uses: actions/checkout@v4
       
-    - name: 📦 安装 Qt (官方方式)
-      uses: jurplel/install-qt-action@v3
+    - name: 📦 安装 Qt
+      uses: jurplel/install-qt-action@v4
       with:
-        version: '6.4.3'
+        version: '6.5.0'
         host: 'windows'
         target: 'desktop'
-        arch: 'win64_msvc2019'
+        arch: 'win64_msvc2019_64'
         modules: 'qtserialbus'
-        setup-python: 'false'
         
     - name: 🔨 配置 CMake
       run: |
-        cmake -S . -B build -G "Visual Studio 16 2019" -A x64
+        cmake -S . -B build -G "Visual Studio 17 2022" -A x64
         
     - name: 🏗️ 编译项目
       run: |
@@ -37,7 +36,7 @@ jobs:
       run: |
         mkdir deploy
         copy build\Release\QtModbusTool.exe deploy\
-        windeployqt deploy\QtModbusTool.exe --release --no-compiler-runtime
+        windeployqt deploy\QtModbusTool.exe --release
         
     - name: 📦 创建压缩包
       run: |
