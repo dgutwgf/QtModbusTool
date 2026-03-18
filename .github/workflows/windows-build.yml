@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     
     steps:
     - name: 📥 检出代码
@@ -26,6 +26,11 @@ jobs:
         
     - name: 🔨 配置 CMake
       run: |
+        # 设置 Qt 环境变量
+        echo "QT_ROOT_DIR=$QT_ROOT_DIR" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$QT_ROOT_DIR" >> $GITHUB_ENV
+        
+        # 配置 CMake
         cmake -S . -B build -G "Visual Studio 17 2022" -A x64
         
     - name: 🏗️ 编译项目
