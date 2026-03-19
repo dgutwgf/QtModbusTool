@@ -9,6 +9,8 @@
 #include <QTimer>
 #include <QByteArray>
 #include <QVector>
+#include <QString>
+#include <QList>
 
 #include "logpanel.h"
 #include "cyclicsender.h"

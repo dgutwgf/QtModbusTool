@@ -1,5 +1,6 @@
 #include "logpanel.h"
 #include <QMessageBox>
+#include <QRegularExpression>
 
 LogPanel::LogPanel(const QString &title, QWidget *parent)
     : QWidget(parent), m_count(0), m_totalBytes(0), m_autoScroll(true), m_title(title)

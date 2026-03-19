@@ -1,6 +1,7 @@
 #include "crc16.h"
 #include <QString>
 #include <QByteArray>
+#include <QRegularExpression>
 
 quint16 CRC16::calculate(const QByteArray &data)
 {

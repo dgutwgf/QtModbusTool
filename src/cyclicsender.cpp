@@ -1,4 +1,5 @@
 #include "cyclicsender.h"
+#include <QDateTime>
 
 CyclicSender::CyclicSender(QObject *parent)
     : QObject(parent), m_timer(new QTimer(this)), m_running(false), m_nextTaskId(1), m_currentTaskIndex(0)

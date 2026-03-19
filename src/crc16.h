@@ -3,6 +3,8 @@
 
 #include <QByteArray>
 #include <QtGlobal>
+#include <QString>
+#include <QStringList>
 
 /**
  * @brief Modbus RTU CRC-16 校验工具类
