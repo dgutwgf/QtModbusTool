@@ -5,6 +5,7 @@
 #include <QModbusReply>
 #include <QSerialPortInfo>
 #include <QScrollBar>
+#include <QRegularExpression>
 
 // CRC-16 计算（Modbus RTU 标准）
 static quint16 calculateCRC16(const QByteArray &data)
