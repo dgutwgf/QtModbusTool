@@ -11,6 +11,8 @@
 #include <QList>
 #include <QDateTime>
 #include <QRegularExpression>
+#include <QTextEdit>
+#include <QLabel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -25,6 +27,12 @@ struct SendTask {
     int maxCount;
     int currentCount;
     QTimer* timer;
+};
+
+// 日志统计
+struct LogStats {
+    int count;
+    int bytes;
 };
 
 class MainWindow : public QMainWindow
@@ -44,6 +52,9 @@ private slots:
     void onAddTaskButtonClicked();
     void onStartTasksButtonClicked();
     void onStopTasksButtonClicked();
+    void onExportSendLog();
+    void onExportReceiveLog();
+    void onExportCombinedLog();
 
 private:
     void setupUI();
@@ -54,6 +65,8 @@ private:
     QByteArray fromHex(const QString& hex);
     void appendSendLog(const QByteArray& data);
     void appendReceiveLog(const QByteArray& data);
+    void appendCombinedLog(const QByteArray& data, bool isSend);
+    void updateLogStats();
     
     Ui::MainWindow* ui;
     QSerialPort* serial;
@@ -63,6 +76,19 @@ private:
     qint64 lastByteTime;
     QByteArray receiveBuffer;
     QTimer* frameTimer;
+    
+    // 日志控件
+    QTextEdit* sendLogEdit;
+    QTextEdit* receiveLogEdit;
+    QTextEdit* combinedLogEdit;
+    QLabel* sendStatsLabel;
+    QLabel* receiveStatsLabel;
+    QLabel* combinedStatsLabel;
+    
+    // 统计
+    LogStats sendStats;
+    LogStats receiveStats;
+    LogStats combinedStats;
 };
 
 #endif // MAINWINDOW_H

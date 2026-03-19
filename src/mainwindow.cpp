@@ -13,6 +13,9 @@
 #include <QGroupBox>
 #include <QTableWidget>
 #include <QCheckBox>
+#include <QFileDialog>
+#include <QFile>
+#include <QTextStream>
 
 // CRC-16 计算（Modbus RTU）
 QByteArray MainWindow::calculateCRC(const QByteArray& data)
@@ -81,6 +84,10 @@ QByteArray MainWindow::fromHex(const QString& hex)
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), isConnected(false), nextTaskId(1), lastByteTime(0)
 {
+    sendStats = {0, 0};
+    receiveStats = {0, 0};
+    combinedStats = {0, 0};
+    
     setupUI();
     
     serial = new QSerialPort(this);
@@ -133,6 +140,24 @@ void MainWindow::setupUI()
     baudCombo->addItems({"1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"});
     baudCombo->setCurrentText("9600");
     connLayout->addWidget(baudCombo);
+    
+    connLayout->addWidget(new QLabel("数据位:"));
+    QComboBox* dataBitsCombo = new QComboBox();
+    dataBitsCombo->addItems({"8", "7", "6", "5"});
+    dataBitsCombo->setCurrentText("8");
+    connLayout->addWidget(dataBitsCombo);
+    
+    connLayout->addWidget(new QLabel("停止位:"));
+    QComboBox* stopBitsCombo = new QComboBox();
+    stopBitsCombo->addItems({"1", "1.5", "2"});
+    stopBitsCombo->setCurrentText("1");
+    connLayout->addWidget(stopBitsCombo);
+    
+    connLayout->addWidget(new QLabel("校验:"));
+    QComboBox* parityCombo = new QComboBox();
+    parityCombo->addItems({"无", "奇", "偶"});
+    parityCombo->setCurrentText("无");
+    connLayout->addWidget(parityCombo);
     
     connLayout->addWidget(new QLabel("帧超时:"));
     QSpinBox* timeoutSpin = new QSpinBox();
@@ -200,31 +225,85 @@ void MainWindow::setupUI()
     taskGroup->setLayout(taskLayout);
     mainLayout->addWidget(taskGroup);
     
-    // 日志区域
+    // 日志区域 - 三个独立的日志框
     QGroupBox* logGroup = new QGroupBox("📝 日志");
     QVBoxLayout* logLayout = new QVBoxLayout();
     
-    QTextEdit* logEdit = new QTextEdit();
-    logEdit->setReadOnly(true);
-    logEdit->setMinimumHeight(300);
-    logLayout->addWidget(logEdit);
+    // 发送日志
+    QHBoxLayout* sendLogLayout = new QHBoxLayout();
+    sendLogLayout->addWidget(new QLabel("📤 发送日志"));
+    sendStatsLabel = new QLabel("(0 次，0B)");
+    sendStatsLabel->setStyleSheet("color: blue; font-weight: bold;");
+    sendLogLayout->addWidget(sendStatsLabel);
+    sendLogLayout->addStretch();
+    QPushButton* exportSendBtn = new QPushButton("💾 导出");
+    exportSendBtn->setMaximumWidth(80);
+    sendLogLayout->addWidget(exportSendBtn);
+    QPushButton* clearSendBtn = new QPushButton("🗑 清空");
+    clearSendBtn->setMaximumWidth(80);
+    sendLogLayout->addWidget(clearSendBtn);
+    logLayout->addLayout(sendLogLayout);
     
-    QHBoxLayout* logBtnLayout = new QHBoxLayout();
-    QPushButton* clearLogBtn = new QPushButton("🗑 清空");
-    logBtnLayout->addWidget(clearLogBtn);
+    sendLogEdit = new QTextEdit();
+    sendLogEdit->setReadOnly(true);
+    sendLogEdit->setMaximumHeight(120);
+    sendLogEdit->setFont(QFont("Consolas", 9));
+    logLayout->addWidget(sendLogEdit);
     
-    QPushButton* exportLogBtn = new QPushButton("💾 导出");
-    logBtnLayout->addWidget(exportLogBtn);
+    // 接收日志
+    QHBoxLayout* receiveLogLayout = new QHBoxLayout();
+    receiveLogLayout->addWidget(new QLabel("📥 接收日志"));
+    receiveStatsLabel = new QLabel("(0 次，0B)");
+    receiveStatsLabel->setStyleSheet("color: green; font-weight: bold;");
+    receiveLogLayout->addWidget(receiveStatsLabel);
+    receiveLogLayout->addStretch();
+    QPushButton* exportReceiveBtn = new QPushButton("💾 导出");
+    exportReceiveBtn->setMaximumWidth(80);
+    receiveLogLayout->addWidget(exportReceiveBtn);
+    QPushButton* clearReceiveBtn = new QPushButton("🗑 清空");
+    clearReceiveBtn->setMaximumWidth(80);
+    receiveLogLayout->addWidget(clearReceiveBtn);
+    logLayout->addLayout(receiveLogLayout);
     
-    logBtnLayout->addStretch();
-    logLayout->addLayout(logBtnLayout);
+    receiveLogEdit = new QTextEdit();
+    receiveLogEdit->setReadOnly(true);
+    receiveLogEdit->setMaximumHeight(120);
+    receiveLogEdit->setFont(QFont("Consolas", 9));
+    logLayout->addWidget(receiveLogEdit);
+    
+    // 合并日志
+    QHBoxLayout* combinedLogLayout = new QHBoxLayout();
+    combinedLogLayout->addWidget(new QLabel("📊 合并日志"));
+    combinedStatsLabel = new QLabel("(0 次，0B)");
+    combinedStatsLabel->setStyleSheet("color: purple; font-weight: bold;");
+    combinedLogLayout->addWidget(combinedStatsLabel);
+    combinedLogLayout->addStretch();
+    QPushButton* exportCombinedBtn = new QPushButton("💾 导出");
+    exportCombinedBtn->setMaximumWidth(80);
+    combinedLogLayout->addWidget(exportCombinedBtn);
+    QPushButton* clearCombinedBtn = new QPushButton("🗑 清空");
+    clearCombinedBtn->setMaximumWidth(80);
+    combinedLogLayout->addWidget(clearCombinedBtn);
+    logLayout->addLayout(combinedLogLayout);
+    
+    combinedLogEdit = new QTextEdit();
+    combinedLogEdit->setReadOnly(true);
+    combinedLogEdit->setMinimumHeight(150);
+    combinedLogEdit->setFont(QFont("Consolas", 9));
+    logLayout->addWidget(combinedLogEdit);
+    
     logGroup->setLayout(logLayout);
     mainLayout->addWidget(logGroup);
     
     // 连接信号
     connect(connectBtn, &QPushButton::clicked, this, &MainWindow::onConnectButtonClicked);
     connect(sendBtn, &QPushButton::clicked, this, &MainWindow::onSendButtonClicked);
-    connect(clearLogBtn, &QPushButton::clicked, this, &MainWindow::onClearLogButtonClicked);
+    connect(clearSendBtn, &QPushButton::clicked, this, [this]() { sendLogEdit->clear(); sendStats = {0, 0}; updateLogStats(); });
+    connect(clearReceiveBtn, &QPushButton::clicked, this, [this]() { receiveLogEdit->clear(); receiveStats = {0, 0}; updateLogStats(); });
+    connect(clearCombinedBtn, &QPushButton::clicked, this, [this]() { combinedLogEdit->clear(); combinedStats = {0, 0}; updateLogStats(); });
+    connect(exportSendBtn, &QPushButton::clicked, this, &MainWindow::onExportSendLog);
+    connect(exportReceiveBtn, &QPushButton::clicked, this, &MainWindow::onExportReceiveLog);
+    connect(exportCombinedBtn, &QPushButton::clicked, this, &MainWindow::onExportCombinedLog);
     connect(addTaskBtn, &QPushButton::clicked, this, &MainWindow::onAddTaskButtonClicked);
     connect(startTasksBtn, &QPushButton::clicked, this, &MainWindow::onStartTasksButtonClicked);
     connect(stopTasksBtn, &QPushButton::clicked, this, &MainWindow::onStopTasksButtonClicked);
@@ -252,11 +331,14 @@ void MainWindow::onConnectButtonClicked()
 {
     QComboBox* portCombo = findChild<QComboBox*>();
     QComboBox* baudCombo = findChild<QComboBox*>();
+    QComboBox* dataBitsCombo = findChild<QComboBox*>();
+    QComboBox* stopBitsCombo = findChild<QComboBox*>();
+    QComboBox* parityCombo = findChild<QComboBox*>();
     QSpinBox* timeoutSpin = findChild<QSpinBox*>();
     QPushButton* connectBtn = findChild<QPushButton*>();
     QLabel* statusLabel = findChild<QLabel*>();
     
-    if (!portCombo || !baudCombo || !timeoutSpin || !connectBtn || !statusLabel) return;
+    if (!portCombo || !baudCombo || !connectBtn || !statusLabel) return;
     
     if (!isConnected) {
         QString portName = portCombo->currentText();
@@ -267,9 +349,33 @@ void MainWindow::onConnectButtonClicked()
         
         serial->setPortName(portName);
         serial->setBaudRate(baudCombo->currentText().toInt());
-        serial->setDataBits(QSerialPort::Data8);
-        serial->setStopBits(QSerialPort::OneStop);
-        serial->setParity(QSerialPort::NoParity);
+        
+        // 数据位
+        int dataBits = dataBitsCombo->currentText().toInt();
+        QSerialPort::DataBits db;
+        switch (dataBits) {
+            case 5: db = QSerialPort::Data5; break;
+            case 6: db = QSerialPort::Data6; break;
+            case 7: db = QSerialPort::Data7; break;
+            default: db = QSerialPort::Data8;
+        }
+        serial->setDataBits(db);
+        
+        // 停止位
+        QString stopBits = stopBitsCombo->currentText();
+        QSerialPort::StopBits sb;
+        if (stopBits == "1.5") sb = QSerialPort::OneAndHalfStop;
+        else if (stopBits == "2") sb = QSerialPort::TwoStop;
+        else sb = QSerialPort::OneStop;
+        serial->setStopBits(sb);
+        
+        // 校验位
+        QString parity = parityCombo->currentText();
+        QSerialPort::Parity p;
+        if (parity == "奇") p = QSerialPort::OddParity;
+        else if (parity == "偶") p = QSerialPort::EvenParity;
+        else p = QSerialPort::NoParity;
+        serial->setParity(p);
         
         if (serial->open(QIODevice::ReadWrite)) {
             isConnected = true;
@@ -324,6 +430,7 @@ void MainWindow::onSendButtonClicked()
     serial->flush();
     
     appendSendLog(data);
+    appendCombinedLog(data, true);
 }
 
 void MainWindow::onSerialDataReceived()
@@ -338,34 +445,141 @@ void MainWindow::onSerialDataReceived()
 
 void MainWindow::appendSendLog(const QByteArray& data)
 {
-    QTextEdit* logEdit = findChild<QTextEdit*>();
-    if (!logEdit) return;
-    
     QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss.zzz");
     QString hexStr = toHex(data);
-    logEdit->append(QString("[%1] >> %2").arg(timestamp).arg(hexStr));
-    logEdit->verticalScrollBar()->setValue(logEdit->verticalScrollBar()->maximum());
+    sendLogEdit->append(QString("[%1] >> %2").arg(timestamp).arg(hexStr));
+    sendLogEdit->verticalScrollBar()->setValue(sendLogEdit->verticalScrollBar()->maximum());
+    
+    sendStats.count++;
+    sendStats.bytes += data.size();
+    updateLogStats();
 }
 
 void MainWindow::appendReceiveLog(const QByteArray& data)
 {
-    QTextEdit* logEdit = findChild<QTextEdit*>();
-    if (!logEdit) return;
-    
     QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss.zzz");
     QString hexStr = toHex(data);
     bool crcOk = verifyCRC(data);
     QString crcMark = crcOk ? " ✓" : " ✗";
-    logEdit->append(QString("[%1] << %2%3").arg(timestamp).arg(hexStr).arg(crcMark));
-    logEdit->verticalScrollBar()->setValue(logEdit->verticalScrollBar()->maximum());
+    receiveLogEdit->append(QString("[%1] << %2%3").arg(timestamp).arg(hexStr).arg(crcMark));
+    receiveLogEdit->verticalScrollBar()->setValue(receiveLogEdit->verticalScrollBar()->maximum());
+    
+    receiveStats.count++;
+    receiveStats.bytes += data.size();
+    updateLogStats();
+}
+
+void MainWindow::appendCombinedLog(const QByteArray& data, bool isSend)
+{
+    QString timestamp = QDateTime::currentDateTime().toString("HH:mm:ss.zzz");
+    QString hexStr = toHex(data);
+    QString line;
+    
+    if (isSend) {
+        line = QString("[%1] >> %2").arg(timestamp).arg(hexStr);
+        combinedStats.bytes += data.size();
+    } else {
+        bool crcOk = verifyCRC(data);
+        QString crcMark = crcOk ? " ✓" : " ✗";
+        line = QString("[%1] << %2%3").arg(timestamp).arg(hexStr).arg(crcMark);
+        combinedStats.bytes += data.size();
+    }
+    
+    combinedLogEdit->append(line);
+    combinedLogEdit->verticalScrollBar()->setValue(combinedLogEdit->verticalScrollBar()->maximum());
+    
+    combinedStats.count++;
+    updateLogStats();
+}
+
+void MainWindow::updateLogStats()
+{
+    sendStatsLabel->setText(QString("(%1 次，%2B)").arg(sendStats.count).arg(sendStats.bytes));
+    receiveStatsLabel->setText(QString("(%1 次，%2B)").arg(receiveStats.count).arg(receiveStats.bytes));
+    combinedStatsLabel->setText(QString("(%1 次，%2B)").arg(combinedStats.count).arg(combinedStats.bytes));
+}
+
+void MainWindow::onExportSendLog()
+{
+    if (sendStats.count == 0) {
+        QMessageBox::information(this, "提示", "暂无发送日志可导出");
+        return;
+    }
+    
+    QString fileName = QFileDialog::getSaveFileName(this, "导出发送日志", 
+        QString("SendLog_%1.txt").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")),
+        "文本文件 (*.txt)");
+    
+    if (fileName.isEmpty()) return;
+    
+    QFile file(fileName);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << sendLogEdit->toPlainText();
+        file.close();
+        QMessageBox::information(this, "成功", QString("发送日志已导出到:\n%1").arg(fileName));
+    } else {
+        QMessageBox::critical(this, "错误", QString("无法写入文件:\n%1").arg(fileName));
+    }
+}
+
+void MainWindow::onExportReceiveLog()
+{
+    if (receiveStats.count == 0) {
+        QMessageBox::information(this, "提示", "暂无接收日志可导出");
+        return;
+    }
+    
+    QString fileName = QFileDialog::getSaveFileName(this, "导出接收日志", 
+        QString("ReceiveLog_%1.txt").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")),
+        "文本文件 (*.txt)");
+    
+    if (fileName.isEmpty()) return;
+    
+    QFile file(fileName);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << receiveLogEdit->toPlainText();
+        file.close();
+        QMessageBox::information(this, "成功", QString("接收日志已导出到:\n%1").arg(fileName));
+    } else {
+        QMessageBox::critical(this, "错误", QString("无法写入文件:\n%1").arg(fileName));
+    }
+}
+
+void MainWindow::onExportCombinedLog()
+{
+    if (combinedStats.count == 0) {
+        QMessageBox::information(this, "提示", "暂无合并日志可导出");
+        return;
+    }
+    
+    QString fileName = QFileDialog::getSaveFileName(this, "导出合并日志", 
+        QString("CombinedLog_%1.txt").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")),
+        "文本文件 (*.txt)");
+    
+    if (fileName.isEmpty()) return;
+    
+    QFile file(fileName);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        out << combinedLogEdit->toPlainText();
+        file.close();
+        QMessageBox::information(this, "成功", QString("合并日志已导出到:\n%1").arg(fileName));
+    } else {
+        QMessageBox::critical(this, "错误", QString("无法写入文件:\n%1").arg(fileName));
+    }
 }
 
 void MainWindow::onClearLogButtonClicked()
 {
-    QTextEdit* logEdit = findChild<QTextEdit*>();
-    if (logEdit) {
-        logEdit->clear();
-    }
+    sendLogEdit->clear();
+    receiveLogEdit->clear();
+    combinedLogEdit->clear();
+    sendStats = {0, 0};
+    receiveStats = {0, 0};
+    combinedStats = {0, 0};
+    updateLogStats();
 }
 
 void MainWindow::onAddTaskButtonClicked()
@@ -498,6 +712,7 @@ void MainWindow::onTaskSend(int taskId)
             serial->flush();
             
             appendSendLog(data);
+            appendCombinedLog(data, true);
             
             task.currentCount++;
             return;
