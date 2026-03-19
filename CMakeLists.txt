@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(QtModbusTool VERSION 1.0.0 LANGUAGES CXX)
+project(QtModbusTool VERSION 1.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -7,25 +7,18 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-# 只使用 Qt6，避免版本混淆
-find_package(Qt6 REQUIRED COMPONENTS Widgets SerialBus)
+find_package(Qt6 REQUIRED COMPONENTS Widgets SerialPort)
 
 qt_add_executable(QtModbusTool
     MANUAL_FINALIZATION
     src/main.cpp
     src/mainwindow.cpp
     src/mainwindow.h
-    src/crc16.cpp
-    src/crc16.h
-    src/logpanel.cpp
-    src/logpanel.h
-    src/cyclicsender.cpp
-    src/cyclicsender.h
 )
 
 target_link_libraries(QtModbusTool PRIVATE
     Qt6::Widgets
-    Qt6::SerialBus
+    Qt6::SerialPort
 )
 
 set_target_properties(QtModbusTool PROPERTIES
