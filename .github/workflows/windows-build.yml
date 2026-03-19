@@ -41,12 +41,27 @@ jobs:
         # 复制主程序
         Copy-Item build\Release\QtModbusTool.exe publish\
         
-        # 手动复制必要的 Qt DLL
+        # 复制 Qt DLL
         Copy-Item $env:QT_ROOT_DIR\bin\Qt6Core.dll publish\
         Copy-Item $env:QT_ROOT_DIR\bin\Qt6Gui.dll publish\
         Copy-Item $env:QT_ROOT_DIR\bin\Qt6Widgets.dll publish\
         Copy-Item $env:QT_ROOT_DIR\bin\Qt6SerialBus.dll publish\
         Copy-Item $env:QT_ROOT_DIR\bin\Qt6SerialPort.dll publish\
+        
+        # 复制平台插件（必须！）
+        New-Item -ItemType Directory -Force -Path publish\platforms
+        Copy-Item $env:QT_ROOT_DIR\plugins\platforms\qwindows.dll publish\platforms\
+        
+        # 复制样式插件（可选）
+        New-Item -ItemType Directory -Force -Path publish\styles
+        Copy-Item $env:QT_ROOT_DIR\plugins\styles\*.dll publish\styles\
+        
+        # 复制多媒体插件（可选）
+        New-Item -ItemType Directory -Force -Path publish\imageformats
+        Copy-Item $env:QT_ROOT_DIR\plugins\imageformats\*.dll publish\imageformats\
+        
+        # 复制 VC 运行时（如果需要）
+        Copy-Item $env:VCToolsRedistDir\x64\Microsoft.VC*.CRT\*.dll publish\ 2>$null
         
     - name: 📦 创建压缩包
       run: |
