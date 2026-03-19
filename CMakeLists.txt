@@ -15,6 +15,12 @@ qt_add_executable(QtModbusTool
     src/main.cpp
     src/mainwindow.cpp
     src/mainwindow.h
+    src/crc16.cpp
+    src/crc16.h
+    src/logpanel.cpp
+    src/logpanel.h
+    src/cyclicsender.cpp
+    src/cyclicsender.h
 )
 
 target_link_libraries(QtModbusTool PRIVATE
