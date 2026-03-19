@@ -60,8 +60,10 @@ jobs:
         New-Item -ItemType Directory -Force -Path publish\imageformats
         Copy-Item $env:QT_ROOT_DIR\plugins\imageformats\*.dll publish\imageformats\
         
-        # 复制 VC 运行时（如果需要）
-        Copy-Item $env:VCToolsRedistDir\x64\Microsoft.VC*.CRT\*.dll publish\ 2>$null
+        # 复制 VC 运行时（如果存在）
+        if (Test-Path "$env:VCToolsRedistDir\x64\Microsoft.VC*.CRT\*.dll") {
+            Copy-Item $env:VCToolsRedistDir\x64\Microsoft.VC*.CRT\*.dll publish\
+        }
         
     - name: 📦 创建压缩包
       run: |
